@@ -213,6 +213,34 @@ button:focus-visible, canvas:focus-visible {
 
 .ticker li { margin: 2px 0; }
 
+.ticker-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 13px;
+}
+
+.ticker-name { font-weight: 500; }
+
+.ticker-parts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px 8px;
+  color: #5c3b2e;
+}
+
+.ticker-speed { color: #1d6a3f; }
+
+.ticker-speed.zero { color: #9a8264; }
+
+.ticker-mult { color: #c81d3a; font-weight: 500; }
+
+.ticker-total { font-weight: 500; color: #24140f; }
+
 .mech-list, .goal-list, .history-list {
   list-style: none;
   margin: 8px 0 0;

@@ -37,15 +37,57 @@ const NAME: Record<string, string> = {
   [BodyId.ramp]: '坡道',
 }
 
-export function pointsFor(id: string, multiplier: number): number | null {
-  const base = BASE_POINTS[id]
-  if (base === undefined) return null
-  return base * multiplier
+/** 撞击速度低于该值时没有速度加成，很慢的命中只拿基础分 */
+const SPEED_FLOOR = 60
+/** 撞击速度达到该值时速度加成封顶，再快也不增加 */
+const SPEED_CAP = 1200
+/** 速度加成最多相当于基础分的一半 */
+const MAX_BONUS_RATIO = 0.5
+
+export interface ScoreBreakdown {
+  base: number
+  speedBonus: number
+  multiplier: number
+  subtotal: number
+  points: number
 }
 
-function remember(doc: PinballDocument, id: string, points: number): void {
+/** 只根据这一击的撞击速度计算速度加成（倍率前），慢速为 0、高速封顶并取整 */
+export function speedBonusFor(base: number, impact: number): number {
+  if (!Number.isFinite(impact) || impact <= SPEED_FLOOR) return 0
+  const ratio = Math.min(1, (impact - SPEED_FLOOR) / (SPEED_CAP - SPEED_FLOOR))
+  return Math.round(base * MAX_BONUS_RATIO * ratio)
+}
+
+/**
+ * 拆出基础分与速度加成：
+ * 先把两者相加，奖励倍率只乘在加总结果上一次，不会把速度加成乘第二遍。
+ * 只有真正接触产生的事件才会走到这里（见碰撞解析与去重逻辑）。
+ */
+export function breakdownFor(id: string, impact: number, multiplier: number): ScoreBreakdown | null {
+  const base = BASE_POINTS[id]
+  if (base === undefined) return null
+  const speedBonus = speedBonusFor(base, impact)
+  const subtotal = base + speedBonus
+  return {
+    base,
+    speedBonus,
+    multiplier,
+    subtotal,
+    points: subtotal * multiplier,
+  }
+}
+
+function remember(doc: PinballDocument, id: string, score: ScoreBreakdown): void {
   doc.feedSeq += 1
-  doc.feed.unshift({ uid: doc.feedSeq, text: `${NAME[id] ?? '撞击'} +${points}`, points })
+  doc.feed.unshift({
+    uid: doc.feedSeq,
+    name: NAME[id] ?? '撞击',
+    base: score.base,
+    speedBonus: score.speedBonus,
+    multiplier: score.multiplier,
+    points: score.points,
+  })
   if (doc.feed.length > 6) doc.feed.length = 6
 }
 
@@ -54,10 +96,11 @@ export function applyScore(doc: PinballDocument, events: ContactEvent[]): Contac
   for (const event of events) {
     const mechanism = findMechanism(doc, event.id)
     if (mechanism && mechanism.cooldownMs > 0) continue
-    const points = pointsFor(event.id, doc.chain.multiplier)
-    if (points === null) continue
-    doc.score += points
-    remember(doc, event.id, points)
+    // 用这一次接触的撞击速度计分，不与前后几帧、旁边的球做平均
+    const score = breakdownFor(event.id, event.impact, doc.chain.multiplier)
+    if (score === null) continue
+    doc.score += score.points
+    remember(doc, event.id, score)
     if (mechanism) mechanism.cooldownMs = cooldownFor(mechanism.kind)
     awarded.push(event)
   }

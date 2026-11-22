@@ -3,9 +3,17 @@ import type { BallState } from '@/shared/document'
 import { speedOf } from '@/shared/geometry'
 import type { CircleSolid, SegmentSolid, Solid } from '@/shared/solids'
 
-function pushEvent(events: ContactEvent[], id: string, x: number, y: number, ball: BallState, emit: boolean): void {
+function pushEvent(
+  events: ContactEvent[],
+  id: string,
+  x: number,
+  y: number,
+  ball: BallState,
+  emit: boolean,
+  impact: number,
+): void {
   if (!emit) return
-  events.push({ id, x, y, speed: speedOf(ball.vx, ball.vy) })
+  events.push({ id, x, y, speed: speedOf(ball.vx, ball.vy), impact })
 }
 
 function separateSpeed(vx: number, vy: number, nx: number, ny: number, kick: number): { vx: number; vy: number } {
@@ -21,7 +29,9 @@ function hitCircle(ball: BallState, solid: CircleSolid, events: ContactEvent[]):
   const dy = ball.y - solid.y
   const dist = Math.hypot(dx, dy)
   if (solid.sensor) {
-    if (dist <= solid.r + ball.radius * 0.85) pushEvent(events, solid.id, solid.x, solid.y, ball, solid.emit)
+    if (dist <= solid.r + ball.radius * 0.85) {
+      pushEvent(events, solid.id, solid.x, solid.y, ball, solid.emit, speedOf(ball.vx, ball.vy))
+    }
     return
   }
   const min = ball.radius + solid.r
@@ -43,7 +53,9 @@ function hitCircle(ball: BallState, solid: CircleSolid, events: ContactEvent[]):
     ball.vx = kicked.vx
     ball.vy = kicked.vy
   }
-  pushEvent(events, solid.id, solid.x, solid.y, ball, solid.emit)
+  // 撞击速度取碰撞前的法向接近速度：只是擦肩而过（vn>=0）不算撞击
+  const impact = vn < 0 ? -vn : 0
+  pushEvent(events, solid.id, solid.x, solid.y, ball, solid.emit, impact)
 }
 
 function hitSegment(ball: BallState, solid: SegmentSolid, events: ContactEvent[]): void {
@@ -95,7 +107,9 @@ function hitSegment(ball: BallState, solid: SegmentSolid, events: ContactEvent[]
     ball.vx = kicked.vx
     ball.vy = kicked.vy
   }
-  pushEvent(events, solid.id, cx, cy, ball, solid.emit)
+  // 撞击速度取碰撞前相对接触面的法向接近速度，包含挡板自身挥动带来的速度
+  const impact = vn < 0 ? -vn : 0
+  pushEvent(events, solid.id, cx, cy, ball, solid.emit, impact)
 }
 
 export function resolveBall(ball: BallState, solids: Solid[], events: ContactEvent[]): void {

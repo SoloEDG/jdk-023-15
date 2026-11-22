@@ -96,7 +96,14 @@ export interface HistoryEntry {
 
 export interface FeedItem {
   uid: number
-  text: string
+  name: string
+  /** 机关基础分（倍率前） */
+  base: number
+  /** 这一击的速度加成分（倍率前，有上限） */
+  speedBonus: number
+  /** 结算时使用的奖励倍率，只在基础分与速度加成加总之后乘一次 */
+  multiplier: number
+  /** 实际入账分数：(base + speedBonus) * multiplier */
   points: number
 }
 

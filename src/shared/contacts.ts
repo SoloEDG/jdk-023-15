@@ -3,6 +3,8 @@ export interface ContactEvent {
   x: number
   y: number
   speed: number
+  /** 这一次接触瞬间的撞击速度（碰撞前的接近速度），只代表当前这一击，不做跨帧平均 */
+  impact: number
 }
 
 export interface RideSample {

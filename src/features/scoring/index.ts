@@ -5,7 +5,12 @@ import { advanceBall } from '@/features/scoring/model/ball-step'
 import { applyScore } from '@/features/scoring/model/score-rules'
 
 export { advanceBall } from '@/features/scoring/model/ball-step'
-export { applyScore, pointsFor } from '@/features/scoring/model/score-rules'
+export {
+  applyScore,
+  breakdownFor,
+  speedBonusFor,
+  type ScoreBreakdown,
+} from '@/features/scoring/model/score-rules'
 export { default as ScoreHud } from '@/features/scoring/ui/ScoreHud.vue'
 export { default as EventTicker } from '@/features/scoring/ui/EventTicker.vue'
 
